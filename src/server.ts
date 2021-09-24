@@ -5,10 +5,18 @@ import mysql from 'mysql'
 const connection = mysql.createConnection({
   host:'localhost',
   user:'root',
-  password:'root',
+  password:'',
   database:'mercadin-sasa'
 })
 
+interface Result {
+  id: number;
+  product_name: number;
+  quantity: number;
+  created_at: string;
+  amount: number;
+  payment_type: string;
+}
 
 const server = express()
 server.use(express.json())
@@ -22,9 +30,22 @@ server.post('/entry', (request: Request, response: Response) => {
   if (productName === '' || quantity === 0 || !createdAt.match(regexDate) || amount < 0.01 || paymentType === '') {
     return response.status(400).json({error: "Dados inválidos!"})
   }
-  connection.query(`INSERT INTO entry (product_name, quantity, created_at, amount, payment_type) VALUES ("${productName}", "${quantity}", "${createdAt}", "${amount}", "${paymentType}")`)
-
-  response.status(201).send();
+  connection.query(`SELECT * FROM entry WHERE product_name = '${productName}'`, (err, results, fields) => {
+    if (results.length > 0) {
+      let newResults = results.filter((current: Result) => {
+        return current.product_name === productName && current.payment_type === paymentType
+      }) 
+      if (newResults.length > 0) {
+        connection.query(`UPDATE entry SET quantity = ${newResults[0].quantity} + ${quantity}, amount = ${newResults[0].amount} + ${amount} WHERE product_name = '${productName}' AND payment_type = '${newResults[0].payment_type}'`)
+        return response.status(201).send();
+        
+      }
+      
+    }
+    connection.query(`INSERT INTO entry (product_name, quantity, created_at, amount, payment_type) VALUES ("${productName}", "${quantity}", "${createdAt}", "${amount}", "${paymentType}")`)
+  
+    response.status(201).send();
+  })
 
 })
 
