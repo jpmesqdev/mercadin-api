@@ -49,16 +49,31 @@ server.post('/entry', (request: Request, response: Response) => {
 
 })
 
+server.get('/entry/datalist', (request: Request, response: Response) => {
+  connection.query(`SELECT DISTINCT product_name FROM entry`, (err, results, fields) => {
+    if (results.length > 0) {
+      return response.json(results)
+    }
+  })
+})
+
 server.get('/entry', (request: Request, response: Response) => {
   connection.query(`SELECT * FROM entry`, (err, results, fields) => {
     response.status(200).json({results})
   })
 })
 
-server.get('/report/daily/:date/:paymentType', (request: Request, response: Response) => {
+server.get('/report/daily/:date', (request: Request, response: Response) => {
   const { date, paymentType } = request.params
-  connection.query(`SELECT created_at, payment_type, SUM(quantity) AS total_quantity, SUM(amount) AS total_amount FROM entry WHERE created_at = '${date}' AND payment_type = '${paymentType}' `, (err, results, fields) => {
+  connection.query(`SELECT * FROM entry WHERE created_at = '${date}'`, (err, results, fields) => {
     response.status(200).json({results})
+  })
+})
+
+server.get('/report/daily/total/:date', (request: Request, response: Response) => {
+  const { date } = request.params;
+  connection.query(`SELECT created_at, SUM(quantity) AS quantity, SUM(amount) AS amount FROM entry WHERE created_at = '${date}'`, (err, results, fields) => {
+    return response.json(results);
   })
 })
 
