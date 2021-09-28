@@ -5,7 +5,7 @@ import mysql from 'mysql'
 const connection = mysql.createConnection({
   host:'localhost',
   user:'root',
-  password:'',
+  password:'root',
   database:'mercadin-sasa'
 })
 
@@ -70,6 +70,20 @@ server.get('/report/daily/:date', (request: Request, response: Response) => {
   })
 })
 
+server.get('/report/monthly/:monthNumber', (request: Request, response: Response) => {
+  const { monthNumber } = request.params
+  connection.query(`SELECT * FROM entry WHERE MONTH(created_at) = '${monthNumber}'`, (err, results, fields) => {
+    response.status(200).json({results})
+  })
+})
+
+server.get('/report/yearly/:yearNumber', (request: Request, response: Response) => {
+  const { yearNumber } = request.params
+  connection.query(`SELECT * FROM entry WHERE YEAR(created_at) = '${yearNumber}'`, (err, results, fields) => {
+    response.status(200).json({results})
+  })
+})
+
 server.get('/report/daily/total/:date', (request: Request, response: Response) => {
   const { date } = request.params;
   connection.query(`SELECT created_at, SUM(quantity) AS quantity, SUM(amount) AS amount FROM entry WHERE created_at = '${date}'`, (err, results, fields) => {
@@ -77,10 +91,17 @@ server.get('/report/daily/total/:date', (request: Request, response: Response) =
   })
 })
 
-server.get('/report/monthly/:date1/:date2/:paymentType', (request: Request, response: Response) => {
-  const { date1, date2, paymentType } = request.params
-  connection.query(`SELECT payment_type, SUM(quantity) AS total_quantity, SUM(amount) AS total_amount FROM entry WHERE (created_at BETWEEN '${date1}' AND '${date2}') AND payment_type = '${paymentType}' `, (err, results, fields) => {
-    response.status(200).json({results})
+server.get('/report/monthly/total/:monthNumber', (request: Request, response: Response) => {
+  const { monthNumber } = request.params
+  connection.query(`SELECT payment_type, SUM(quantity) AS quantity, SUM(amount) AS amount FROM entry WHERE MONTH(created_at) = '${monthNumber}'`, (err, results, fields) => {
+    response.status(200).json(results)
+  })
+})
+
+server.get('/report/yearly/total/:yearNumber', (request: Request, response: Response) => {
+  const { yearNumber } = request.params
+  connection.query(`SELECT payment_type, SUM(quantity) AS quantity, SUM(amount) AS amount FROM entry WHERE YEAR(created_at) = '${yearNumber}'`, (err, results, fields) => {
+    response.status(200).json(results)
   })
 })
 
