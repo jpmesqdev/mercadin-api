@@ -64,7 +64,7 @@ server.get('/entry', (request: Request, response: Response) => {
 })
 
 server.get('/report/daily/:date', (request: Request, response: Response) => {
-  const { date, paymentType } = request.params
+  const { date } = request.params
   connection.query(`SELECT * FROM entry WHERE created_at = '${date}'`, (err, results, fields) => {
     response.status(200).json({results})
   })
@@ -104,6 +104,5 @@ server.get('/report/yearly/total/:yearNumber', (request: Request, response: Resp
     response.status(200).json(results)
   })
 })
-
 
 server.listen(3001)
