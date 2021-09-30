@@ -25,7 +25,7 @@ server.use(cors())
 server.post('/entry', (request: Request, response: Response) => {
   const { productName, quantity, createdAt, amount, paymentType } = request.body
 
-  const regexDate = '^(?:(?:1[6-9]|[2-9]\\d)?\\d{2})(?:(?:(\\/|-|\\.)(?:0?[13578]|1[02])\\1(?:31))|(?:(\\/|-|\\.)(?:0?[13-9]|1[0-2])\\2(?:29|30)))$|^(?:(?:(?:1[6-9]|[2-9]\\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00)))(\\/|-|\\.)0?2\\3(?:29)$|^(?:(?:1[6-9]|[2-9]\\d)?\\d{2})(\\/|-|\\.)(?:(?:0?[1-9])|(?:1[0-2]))\\4(?:0?[1-9]|1\\d|2[0-8])$';
+  const regexDate = '^(?:(?:31(\\/|-|\\.)(?:0?[13578]|1[02]|(?:Jan|Mar|May|Jul|Aug|Oct|Dec)))\\1|(?:(?:29|30)(\\/|-|\\.)(?:0?[1,3-9]|1[0-2]|(?:Jan|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec))\\2))(?:(?:1[6-9]|[2-9]\\d)?\\d{2})$|^(?:29(\\/|-|\\.)(?:0?2|(?:Feb))\\3(?:(?:(?:1[6-9]|[2-9]\\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00))))$|^(?:0?[1-9]|1\\d|2[0-8])(\\/|-|\\.)(?:(?:0?[1-9]|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep))|(?:1[0-2]|(?:Oct|Nov|Dec)))\\4(?:(?:1[6-9]|[2-9]\\d)?\\d{2})$';
 
   if (productName === '' || quantity === 0 || !createdAt.match(regexDate) || amount < 0.01 || paymentType === '') {
     return response.status(400).json({error: "Dados inválidos!"})
@@ -33,7 +33,9 @@ server.post('/entry', (request: Request, response: Response) => {
   connection.query(`SELECT * FROM entry WHERE product_name = '${productName}'`, (err, results, fields) => {
     if (results.length > 0) {
       let newResults = results.filter((current: Result) => {
-        return current.product_name === productName && current.payment_type === paymentType
+        const newDate = Intl.DateTimeFormat('pt-BR').format(new Date(current.created_at)).substring(0, 3) + createdAt.substring(3, 10)
+
+        return current.product_name === productName && current.payment_type === paymentType && newDate === createdAt
       }) 
       if (newResults.length > 0) {
         connection.query(`UPDATE entry SET quantity = ${newResults[0].quantity} + ${quantity}, amount = ${newResults[0].amount} + ${amount} WHERE product_name = '${productName}' AND payment_type = '${newResults[0].payment_type}'`)
@@ -41,8 +43,9 @@ server.post('/entry', (request: Request, response: Response) => {
         
       }
       
+      const DBCreatedAt = createdAt.replace(/["/"]/g, "-").split('-').reverse().join('-')
+      connection.query(`INSERT INTO entry (product_name, quantity, created_at, amount, payment_type) VALUES ("${productName}", "${quantity}", "${DBCreatedAt}", "${amount}", "${paymentType}")`)
     }
-    connection.query(`INSERT INTO entry (product_name, quantity, created_at, amount, payment_type) VALUES ("${productName}", "${quantity}", "${createdAt}", "${amount}", "${paymentType}")`)
   
     response.status(201).send();
   })
@@ -58,7 +61,7 @@ server.get('/entry/datalist', (request: Request, response: Response) => {
 })
 
 server.get('/entry', (request: Request, response: Response) => {
-  connection.query(`SELECT * FROM entry`, (err, results, fields) => {
+  connection.query(`SELECT * FROM entry ORDER BY created_at DESC`, (err, results, fields) => {
     response.status(200).json({results})
   })
 })
